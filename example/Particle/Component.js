@@ -1,0 +1,46 @@
+import ComponentFactory from './VueComponentFactory'
+
+
+export default class Component {
+  static register(name) {
+    componentFactory(this, name);
+  }
+}
+
+
+function componentFactory(Component, name, options) {
+  if (!options) {
+    options = {}
+  }
+  options.name =  name || Component.name
+  //options.name = options.name || Component.name
+  // prototype props.
+  var proto = Component.prototype
+  Object.getOwnPropertyNames(proto).forEach(function (key) {
+    if (key === 'constructor') {
+      return
+    }
+    // hooks
+    if (internalHooks.indexOf(key) > -1) {
+      options[key] = proto[key]
+      return
+    }
+    var descriptor = Object.getOwnPropertyDescriptor(proto, key)
+    if (typeof descriptor.value === 'function') {
+      // methods
+      (options.methods || (options.methods = {}))[key] = descriptor.value
+    } else if (descriptor.get || descriptor.set) {
+      // computed properties
+      (options.computed || (options.computed = {}))[key] = {
+        get: descriptor.get,
+        set: descriptor.set
+      }
+    }
+  })
+  // find super
+  var superProto = Object.getPrototypeOf(Component.prototype)
+  var Super = superProto instanceof Vue
+    ? superProto.constructor
+    : Vue
+  return Super.extend(options)
+}
